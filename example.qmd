@@ -1,0 +1,15 @@
+---
+title: "Wordcount Example"
+subtitle: "Example with {{wordcount}} words"
+filters:
+  - wordcount
+format: html
+---
+
+## Heading
+
+Words can be inserted by using the `{{wordcount}}` doohickey.
+It's not a shortcode, since those have inner arrows.
+It is something, maybe a placeholder.
+
+There are {{wordcount}} words.
