@@ -34,7 +34,11 @@ local function add_count_meta(meta)
   for key, val in pairs(meta) do
     -- convert val to string https://pandoc.org/lua-filters.html#pandoc.utils.stringify
     stri = pandoc.utils.stringify(val)
-    meta[key] = stri:gsub("{{wordcount}}", words)
+    -- lua str_detect = string.find https://www.lua.org/pil/20.1.html
+    -- can't gsub a null thing, so this checks first and that's enough
+    if string.find(stri, "{{wordcount}}") then
+      meta[key] = stri:gsub("{{wordcount}}", words)
+    end
   end
   -- modified meta directly, so don't need to return it
 end

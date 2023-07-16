@@ -30,8 +30,8 @@ and it will replace `{{wordcount}}` with it's estimate.
 
 Here is the source code for a minimal example: [example.qmd](example.qmd).
 
-<!-- pdftools::pdf_convert('template.pdf',pages = 1)
-![[template.qmd](template.qmd)](template_1.png) -->
+<!-- pdftools::pdf_convert('example.pdf',pages = 1) -->
+![[example.qmd](example.qmd)](example_1.png) 
 
 ## Licensing
 

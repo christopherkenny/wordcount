@@ -3,7 +3,7 @@ title: "Wordcount Example"
 subtitle: "Example with {{wordcount}} words"
 filters:
   - wordcount
-format: html
+format: pdf
 ---
 
 ## Heading
