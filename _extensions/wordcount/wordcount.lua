@@ -39,6 +39,9 @@ local function add_count_meta(meta)
     if string.find(stri, "{{wordcount}}") then
       meta[key] = stri:gsub("{{wordcount}}", words)
     end
+    if string.find(stri, "{{wordcountref}}") then
+      meta[key] = stri:gsub("{{wordcountref}}", wordsall)
+    end
   end
   -- modified meta directly, so don't need to return it
 end
@@ -52,6 +55,9 @@ add_count_body = {
     if el.text == "{{wordcount}}" then
       el.text = words
     end
+    if el.text == "{{wordcountref}}" then
+      el.text = wordsall
+    end
     -- return here because this is applied as a filter in walk_block
     return el
   end
@@ -63,8 +69,19 @@ function Pandoc(el)
     -- Could be either of these. The second seems simpler, but not sure the difference
     -- https://github.com/pandoc/lua-filters/blob/master/wordcount/wordcount.lua
     pandoc.walk_block(pandoc.Div(el.blocks), wordcount)
+
     -- other example https://pandoc.org/lua-filters.html#counting-words-in-a-document
     -- el.blocks:walk(wordcount)
+    
+    -- reset vars
+    wordsbody = words
+    words = 0
+    
+    -- proc cites
+    el2 = pandoc.utils.citeproc(el)
+    pandoc.walk_block(pandoc.Div(el2.blocks), wordcount)
+    wordsall = words
+    words = wordsbody
     
     -- 2. replace {{wordcount}} with words for body
     Str = pandoc.walk_block(pandoc.Div(el.blocks), add_count_body)

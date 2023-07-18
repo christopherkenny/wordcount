@@ -2,6 +2,7 @@
 
 This extension *inserts* word counts into Quarto documents in the place of `{{wordcount}}`.
 Word counts can be inserted in the body or metadata (YAML header) of a document.
+To include the number of words in the references, use `{{wordcountref}}`.
 
 You may also be interested in:
 
@@ -19,12 +20,12 @@ If you're using version control, you will want to check in this directory.
 
 ## Using
 
-After installing, simply add `{{wordcount}}` in your document (without the `tics`).
+After installing, simply add `{{wordcount}}` or `{{wordcountref}}` in your document (without the `tics`).
 Make sure there are spaces around it.
 For example you could write:
 > There are {{wordcount}} words in this document.
 
-and it will replace `{{wordcount}}` with it's estimate.
+and it will replace `{{wordcount}}` with its estimate.
 
 ## Example
 
