@@ -20,8 +20,16 @@ If you're using version control, you will want to check in this directory.
 
 ## Using
 
-After installing, simply add `{{wordcount}}` or `{{wordcountref}}` in your document (without the \`tics\`).
-Make sure there are spaces around it.
+After installing:
+
+- Add
+  ```
+  filters:
+    - wordcount
+  ```
+  to the YAML header of your Quarto file
+- Add `{{wordcount}}` or `{{wordcountref}}` in your document (without the \`tics\`). Make sure there are spaces around it.
+
 For example you could write:
 > There are {{wordcount}} words in this document.
 
