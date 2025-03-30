@@ -139,7 +139,7 @@ function Pandoc(el)
   add_count_meta(el.meta, totalwords)
 
   -- Phase 6: Log section counts
-  quarto.log.output('-------------------------')
+  quarto.log.output('----------------------------------------')
   quarto.log.output("📊 Word Count by Section:")
   local section_sum = 0
   for _, sec in ipairs(section_order) do
@@ -150,9 +150,9 @@ function Pandoc(el)
     local indent = string.rep("  ", level - 1)
     quarto.log.output(string.format("%s• %s: %d words", indent, title, count))
   end
-  quarto.log.output('-------------------------')
+  quarto.log.output('----------------------------------------')
   quarto.log.output("🔎 Total words: " .. wordsall)
-  quarto.log.output('-------------------------')
+  quarto.log.output('----------------------------------------')
 
   return pandoc.Pandoc(updated_blocks, el.meta)
 end
