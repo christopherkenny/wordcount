@@ -1,41 +1,86 @@
--- this chunk is modified by deleting out non-word counter information from
--- https://github.com/pandoc/lua-filters/blob/master/wordcount/wordcount.lua
 words = 0
-wordcount = {
-  Str = function(el)
-    -- we don't count a word if it's entirely punctuation:
-    if el.text:match("%P") then
-        words = words + 1
+words_by_section = {}
+section_order = {}
+current_section = "Document"
+track_sections = true
+
+-- Count words in inline elements
+function count_inlines(inlines)
+  for _, el in ipairs(inlines) do
+    if el.t == "Str" and el.text:match("%P") then
+      words = words + 1
+      if track_sections then
+        words_by_section[current_section] = (words_by_section[current_section] or 0) + 1
+      end
+    elseif el.t == "Code" then
+      local _, n = el.text:gsub("%S+", "")
+      words = words + n
+      if track_sections then
+        words_by_section[current_section] = (words_by_section[current_section] or 0) + n
+      end
     end
-  end,
-
-  Code = function(el)
-    _,n = el.text:gsub("%S+","")
-    words = words + n
-  end,
-
-  CodeBlock = function(el)
-    _,n = el.text:gsub("%S+","")
-    words = words + n
   end
-}
+end
 
--- original meta thing. the element is called meta, then we can loop over elements
--- check if the `wordcount` variable is set to `process-anyway`
--- function Meta(meta)
---   if meta.wordcount and (meta.wordcount=="process-anyway"
---     or meta.wordcount=="process" or meta.wordcount=="convert") then
---       process_anyway = true
---   end
--- end
+-- Count words in block elements and update section context
+function count_blocks(blocks)
+  for _, block in ipairs(blocks) do
+    if block.t == "Header" and block.level <= 3 then
+      current_section = pandoc.utils.stringify(block.content)
+      if track_sections and not words_by_section[current_section] then
+        table.insert(section_order, current_section)
+      end
+    elseif block.t == "Para" or block.t == "Plain" then
+      count_inlines(block.content)
+    elseif block.t == "CodeBlock" then
+      local _, n = block.text:gsub("%S+", "")
+      words = words + n
+      if track_sections then
+        words_by_section[current_section] = (words_by_section[current_section] or 0) + n
+      end
+    elseif block.t == "BlockQuote" or block.t == "Div" then
+      count_blocks(block.content)
+    elseif block.t == "BulletList" or block.t == "OrderedList" then
+      for _, item in ipairs(block.content) do
+        count_blocks(item)
+      end
+    end
+  end
+end
 
+function section_exists(name)
+  for _, v in ipairs(section_order) do
+    if v == name then return true end
+  end
+  return false
+end
+
+-- Add Reference section word count after citeproc
+function count_reference_section(blocks)
+  for _, block in ipairs(blocks) do
+    if block.t == "Div" and block.attr and block.attr.classes then
+      for _, class in ipairs(block.attr.classes) do
+        if class == "references" then
+          local ref_section = "References"
+          if not section_exists(ref_section) then
+            table.insert(section_order, ref_section)
+            words_by_section[ref_section] = 0
+          end
+          local saved_track = track_sections
+          track_sections = true
+          current_section = ref_section
+          count_blocks(block.content)
+          track_sections = saved_track
+        end
+      end
+    end
+  end
+end
+
+-- Replace {{wordcount}} and {{wordcountref}} in metadata
 local function add_count_meta(meta)
-  -- loop like so https://github.com/quarto-dev/quarto-cli/discussions/4042
   for key, val in pairs(meta) do
-    -- convert val to string https://pandoc.org/lua-filters.html#pandoc.utils.stringify
-    stri = pandoc.utils.stringify(val)
-    -- lua str_detect = string.find https://www.lua.org/pil/20.1.html
-    -- can't gsub a null thing, so this checks first and that's enough
+    local stri = pandoc.utils.stringify(val)
     if string.find(stri, "{{wordcount}}") then
       meta[key] = stri:gsub("{{wordcount}}", words)
     end
@@ -43,55 +88,61 @@ local function add_count_meta(meta)
       meta[key] = stri:gsub("{{wordcountref}}", wordsall)
     end
   end
-  -- modified meta directly, so don't need to return it
 end
 
+-- Replace {{wordcount}} and {{wordcountref}} in body text
 add_count_body = {
-  -- we only care if it's a Str type
   Str = function(el)
-    -- it breaks on spaces 
-    -- so use {{wordcount}} over  {{ wordcount }}
-    -- then we can directly check for {{wordcount}} and replace w/ number
     if el.text == "{{wordcount}}" then
-      el.text = words
+      el.text = tostring(words)
+    elseif el.text == "{{wordcountref}}" then
+      el.text = tostring(wordsall)
     end
-    if el.text == "{{wordcountref}}" then
-      el.text = wordsall
-    end
-    -- return here because this is applied as a filter in walk_block
     return el
   end
 }
 
 function Pandoc(el)
-    -- skip metadata, just count body:
-    -- 1. tally count
-    -- Could be either of these. The second seems simpler, but not sure the difference
-    -- https://github.com/pandoc/lua-filters/blob/master/wordcount/wordcount.lua
-    pandoc.walk_block(pandoc.Div(el.blocks), wordcount)
+  -- Phase 1: Count body (before citeproc)
+  words = 0
+  words_by_section = {}
+  section_order = {}
+  current_section = "Document"
+  track_sections = true
+  count_blocks(el.blocks)
+  wordsbody = words
 
-    -- other example https://pandoc.org/lua-filters.html#counting-words-in-a-document
-    -- el.blocks:walk(wordcount)
-    
-    -- reset vars
-    wordsbody = words
-    words = 0
-    
-    -- proc cites
-    el2 = pandoc.utils.citeproc(el)
-    pandoc.walk_block(pandoc.Div(el2.blocks), wordcount)
-    wordsall = words
-    words = wordsbody
-    
-    -- 2. replace {{wordcount}} with words for body
-    Str = pandoc.walk_block(pandoc.Div(el.blocks), add_count_body)
+  -- Phase 2: Count total after citeproc (for wordcountref)
+  words = 0
+  track_sections = false
+  current_section = "Document"
+  local el2 = pandoc.utils.citeproc(el)
+  count_blocks(el2.blocks)
+  wordsall = words
 
-    -- 3. replace {{wordcount}} with words for metadata
-    -- modifies the meta data directly, oop-like
-    add_count_meta(el.meta)
-    
-    -- 4. return new pandoc object, with modified text `Str` and metadata `el.meta` 
-    -- like in https://github.com/ute/search-replace/blob/main/_extensions/search-replace/search-replace.lua
-    -- see also https://pandoc.org/lua-filters.html#type-pandoc
-    return pandoc.Pandoc(Str, el.meta)
+  -- Phase 3: Count References section from citeproc-enhanced blocks
+  current_section = "Document"
+  count_reference_section(el2.blocks)
+
+  -- Restore pre-citeproc word count for text replacement
+  words = wordsbody
+
+  -- Phase 4: Replace {{wordcount}}/{{wordcountref}} in body
+  local updated_blocks = pandoc.walk_block(pandoc.Div(el.blocks), add_count_body)
+
+  -- Phase 5: Replace {{wordcount}} in metadata
+  add_count_meta(el.meta)
+
+  -- Phase 6: Print section word counts
+  quarto.log.output('-------------------------')
+  quarto.log.output("📊 Word Count by Section:")
+  local section_sum = 0
+  for _, section in ipairs(section_order) do
+    local count = words_by_section[section] or 0
+    section_sum = section_sum + count
+    quarto.log.output(string.format("  • %s: %d words", section, count))
+  end
+  quarto.log.output('-------------------------')
+
+  return pandoc.Pandoc(updated_blocks, el.meta)
 end

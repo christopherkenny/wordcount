@@ -6,7 +6,7 @@ filters:
 format: pdf
 references:
   - id: knuth1984
-    author: 
+    author:
       - Donald Ervin Knuth
       - Duane Bibby
     title: The TeXBook
@@ -23,5 +23,13 @@ There are {{wordcount}} words.
 
 We can add cites too, such as @knuth1984.
 Then we can count the total words, including references, as {{wordcountref}} using `{{wordcountref}}`.
+
+## Words by section
+
+The number of words by section will be logged to the Quarto terminal.
+
+### Lower-level headings
+
+Of course, low level headings can be used too.
 
 ## References
