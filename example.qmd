@@ -1,5 +1,5 @@
 ---
-title: "Wordcount Example^[Example with {{wordcount}} words]"
+title: "Wordcount Example"
 subtitle: "Example with {{wordcount}} words"
 filters:
   - wordcount
