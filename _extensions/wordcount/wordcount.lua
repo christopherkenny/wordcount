@@ -1,4 +1,6 @@
 words = 0
+footnote_words = 0
+counting_footnotes = true
 words_by_section = {}
 section_order = {}
 current_section = "Document"
@@ -28,7 +30,11 @@ function count_inlines(inlines)
       end
     elseif el.t == "Note" then
       -- Count words in footnote content
+      local saved_words = words
       count_blocks(el.content)
+      if counting_footnotes then
+        footnote_words = footnote_words + (words - saved_words)
+      end
     end
   end
 end
@@ -124,6 +130,7 @@ function Pandoc(el)
   track_sections = true
   count_blocks(el.blocks)
   local totalwords = words -- this is for {{wordcount}}
+  counting_footnotes = false
 
   -- Phase 2: Count post-citeproc for {{wordcountref}}
   words = 0
@@ -154,6 +161,8 @@ function Pandoc(el)
     local indent = string.rep("  ", level - 1)
     quarto.log.output(string.format("%s• %s: %d words", indent, title, count))
   end
+  quarto.log.output('----------------------------------------')
+  quarto.log.output(string.format("📝 Footnote words: %d", footnote_words))
   quarto.log.output('----------------------------------------')
   quarto.log.output("🔎 Total words: " .. wordsall)
   quarto.log.output('----------------------------------------')
