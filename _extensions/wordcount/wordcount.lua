@@ -26,6 +26,9 @@ function count_inlines(inlines)
       if track_sections then
         words_by_section[current_section] = (words_by_section[current_section] or 0) + n
       end
+    elseif el.t == "Note" then
+      -- Count words in footnote content
+      count_blocks(el.content)
     end
   end
 end
@@ -85,6 +88,7 @@ function count_reference_section(blocks)
 end
 
 -- Replace {{wordcount}} and {{wordcountref}} in metadata
+-- This version counts footnotes but flattens the structure for replacement
 local function add_count_meta(meta, totalwords)
   for key, val in pairs(meta) do
     local stri = pandoc.utils.stringify(val)
@@ -92,7 +96,7 @@ local function add_count_meta(meta, totalwords)
       meta[key] = stri:gsub("{{wordcount}}", totalwords)
     end
     if string.find(stri, "{{wordcountref}}") then
-      meta[key] = stri:gsub("{{wordcountref}}", wordsall)
+      meta[key] = stri:gsub("{{wordcountref}}", wordsall or totalwords)
     end
   end
 end
@@ -154,5 +158,5 @@ function Pandoc(el)
   quarto.log.output("🔎 Total words: " .. wordsall)
   quarto.log.output('----------------------------------------')
 
-  return pandoc.Pandoc(updated_blocks, el.meta)
+  return pandoc.Pandoc(updated_blocks.content, el.meta)
 end
