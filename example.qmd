@@ -1,5 +1,5 @@
 ---
-title: "Wordcount Example"
+title: "Wordcount Example^[Example with {{wordcount}} words]"
 subtitle: "Example with {{wordcount}} words"
 filters:
   - wordcount
@@ -19,7 +19,7 @@ Words can be inserted by using the `{{wordcount}}` doohickey.
 It's not a shortcode, since those have inner arrows.
 It is something, maybe a placeholder.
 
-There are {{wordcount}} words.
+There are {{wordcount}} words.^[Works with general footnotes too: total of {{wordcount}} words.]
 
 We can add cites too, such as @knuth1984.
 Then we can count the total words, including references, as {{wordcountref}} using `{{wordcountref}}`.
