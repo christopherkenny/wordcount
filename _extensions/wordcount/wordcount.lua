@@ -93,6 +93,15 @@ function count_reference_section(blocks)
   end
 end
 
+-- Truncate and pad section names for alignment
+function format_section_name(name, max_length)
+  local truncated = string.sub(name, 1, max_length)
+  if string.len(name) > max_length then
+    truncated = string.sub(truncated, 1, max_length - 3) .. "..."
+  end
+  return string.format("%-" .. max_length .. "s", truncated)
+end
+
 -- Replace {{wordcount}} and {{wordcountref}} in metadata
 -- This version counts footnotes but flattens the structure for replacement
 local function add_count_meta(meta, totalwords)
@@ -149,22 +158,29 @@ function Pandoc(el)
   -- Phase 5: Replace placeholders in metadata
   add_count_meta(el.meta, totalwords)
 
-  -- Phase 6: Log section counts
+  -- Phase 6: Log section counts with aligned formatting
   quarto.log.output('----------------------------------------')
   quarto.log.output("📊 Word Count by Section:")
   local section_sum = 0
+  local cumulative_count = 0
   for _, sec in ipairs(section_order) do
     local title = sec.title
     local level = sec.level or 1
     local count = words_by_section[title] or 0
     section_sum = section_sum + count
+    cumulative_count = cumulative_count + count
     local indent = string.rep("  ", level - 1)
-    quarto.log.output(string.format("%s• %s: %d words", indent, title, count))
+    local indent_length = string.len(indent)
+    local available_space = 20 - indent_length - 2  -- subtract space for bullet and space
+    local formatted_title = format_section_name(title, available_space)
+    local total_prefix_length = indent_length + 2 + available_space  -- indent + "• " + title
+    local padding = string.rep(" ", 22 - total_prefix_length)  -- pad to consistent position
+    quarto.log.output(string.format("%s• %s%s: %4d words (cumulative: %5d)", indent, formatted_title, padding, count, cumulative_count))
   end
   quarto.log.output('----------------------------------------')
   quarto.log.output(string.format("📝 Footnote words: %d", footnote_words))
   quarto.log.output('----------------------------------------')
-  quarto.log.output("🔎 Total words: " .. wordsall)
+  quarto.log.output(string.format("🔎 Total words: %d", wordsall))
   quarto.log.output('----------------------------------------')
 
   return pandoc.Pandoc(updated_blocks.content, el.meta)
