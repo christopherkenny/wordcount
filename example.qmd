@@ -3,6 +3,9 @@ title: "Wordcount Example"
 subtitle: "Example with {{wordcount}} words"
 filters:
   - wordcount
+wordcount:
+  count-code-blocks: false
+  count-inline-code: false
 format: pdf
 references:
   - id: knuth1984
@@ -31,5 +34,17 @@ The number of words by section will be logged to the Quarto terminal.
 ### Lower-level headings
 
 Of course, low level headings can be used too.
+
+### Behavior of Inline Code
+
+There are two YAML parameters that control how code is counted:
+
+- **`count-code-blocks`** – includes or excludes fenced/indented code blocks (`CodeBlock` elements).
+- **`count-inline-code`** – includes or excludes inline code spans (`` `like this` ``).
+
+Both default to `true` for backward compatibility.  
+When `count-inline-code` is enabled, inline code counts each non-space token inside backticks.  
+For example, `` `r 2+2` `` adds **2** words, while `` `r 2 + 2` `` adds **4**.  
+Setting `count-inline-code: false` prevents inline code from affecting the total word count.
 
 ## References
