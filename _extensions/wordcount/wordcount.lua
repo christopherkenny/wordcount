@@ -6,6 +6,10 @@ section_order = {}
 current_section = "Document"
 track_sections = true
 
+-- Config toggles (defaults)
+count_code_blocks = true
+count_inline_code = true
+
 -- Check if a section already exists
 function section_exists(name)
   for _, sec in ipairs(section_order) do
@@ -22,12 +26,14 @@ function count_inlines(inlines)
       if track_sections then
         words_by_section[current_section] = (words_by_section[current_section] or 0) + 1
       end
-    elseif el.t == "Code" then
+
+    elseif el.t == "Code" and count_inline_code then
       local _, n = el.text:gsub("%S+", "")
       words = words + n
       if track_sections then
         words_by_section[current_section] = (words_by_section[current_section] or 0) + n
       end
+
     elseif el.t == "Note" then
       -- Count words in footnote content
       local saved_words = words
@@ -47,16 +53,20 @@ function count_blocks(blocks)
       if track_sections and not section_exists(current_section) then
         table.insert(section_order, { title = current_section, level = block.level })
       end
+
     elseif block.t == "Para" or block.t == "Plain" then
       count_inlines(block.content)
-    elseif block.t == "CodeBlock" then
+
+    elseif block.t == "CodeBlock" and count_code_blocks then
       local _, n = block.text:gsub("%S+", "")
       words = words + n
       if track_sections then
         words_by_section[current_section] = (words_by_section[current_section] or 0) + n
       end
+
     elseif block.t == "BlockQuote" or block.t == "Div" then
       count_blocks(block.content)
+
     elseif block.t == "BulletList" or block.t == "OrderedList" then
       for _, item in ipairs(block.content) do
         count_blocks(item)
@@ -103,7 +113,6 @@ function format_section_name(name, max_length)
 end
 
 -- Replace {{wordcount}} and {{wordcountref}} in metadata
--- This version counts footnotes but flattens the structure for replacement
 local function add_count_meta(meta, totalwords)
   for key, val in pairs(meta) do
     local stri = pandoc.utils.stringify(val)
@@ -131,6 +140,17 @@ function make_add_count_body(totalwords)
 end
 
 function Pandoc(el)
+  -- Read user options from YAML
+  if el.meta.wordcount then
+    local wc_meta = el.meta.wordcount
+    if wc_meta["count-code-blocks"] ~= nil then
+      count_code_blocks = pandoc.utils.stringify(wc_meta["count-code-blocks"]) ~= "false"
+    end
+    if wc_meta["count-inline-code"] ~= nil then
+      count_inline_code = pandoc.utils.stringify(wc_meta["count-inline-code"]) ~= "false"
+    end
+  end
+
   -- Phase 1: Count words before citeproc
   words = 0
   words_by_section = {}
@@ -158,7 +178,7 @@ function Pandoc(el)
   -- Phase 5: Replace placeholders in metadata
   add_count_meta(el.meta, totalwords)
 
-  -- Phase 6: Log section counts with aligned formatting
+  -- Phase 6: Log section counts
   quarto.log.output('----------------------------------------')
   quarto.log.output("📊 Word Count by Section:")
   local section_sum = 0
@@ -171,10 +191,10 @@ function Pandoc(el)
     cumulative_count = cumulative_count + count
     local indent = string.rep("  ", level - 1)
     local indent_length = string.len(indent)
-    local available_space = 20 - indent_length - 2  -- subtract space for bullet and space
+    local available_space = 20 - indent_length - 2
     local formatted_title = format_section_name(title, available_space)
-    local total_prefix_length = indent_length + 2 + available_space  -- indent + "• " + title
-    local padding = string.rep(" ", 22 - total_prefix_length)  -- pad to consistent position
+    local total_prefix_length = indent_length + 2 + available_space
+    local padding = string.rep(" ", 22 - total_prefix_length)
     quarto.log.output(string.format("%s• %s%s: %4d words (cumulative: %5d)", indent, formatted_title, padding, count, cumulative_count))
   end
   quarto.log.output('----------------------------------------')

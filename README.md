@@ -23,7 +23,7 @@ If you're using version control, you will want to check in this directory.
 After installing:
 
 - Add
-  ```
+  ```yaml
   filters:
     - wordcount
   ```
@@ -34,6 +34,22 @@ For example you could write:
 > There are {{wordcount}} words in this document.
 
 and it will replace `{{wordcount}}` with its estimate.
+
+You can also include additional settings like the following to control whether inline code is counted in the word total:
+
+```yaml
+filters:
+  - wordcount
+wordcount:
+  count-code-blocks: false
+  count-inline-code: false
+```
+
+When true: 
+- `r 2+2` increases the count by 2.
+- `r 2 + 2` increases the count by 4.
+
+When set to false, inline code does not contribute to the word count.
 
 ## Example
 
